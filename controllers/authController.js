@@ -7,7 +7,7 @@ const { successResponse, errorResponse } = require('../utils/response');
 
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 12;
 const JWT_SECRET = process.env.JWT_SECRET;
-const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '15m';
+const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '8h';
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
 // Generate Access Token

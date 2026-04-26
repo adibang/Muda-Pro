@@ -1,0 +1,37 @@
+/* ==========================================
+   THEME CSS – MUDA PRO
+   ========================================== */
+:root {
+  --prime-500: #22c55e;
+  --prime-400: #4ade80;
+  --prime-600: #16a34a;
+  --accent-400: #facc15;
+  --accent-500: #eab308;
+
+  --white: #ffffff;
+  --mood-50: #f9fafb;
+  --mood-100: #f3f4f6;
+  --mood-200: #e5e7eb;
+  --mood-300: #d1d5db;
+  --mood-400: #9ca3af;
+  --mood-500: #6b7280;
+  --mood-700: #374151;
+  --mood-800: #1f2937;   /* baru: untuk teks utama */
+  --mood-900: #111827;
+
+  --success: #22c55e;
+  --warning: #facc10;
+  --danger: #ef4444;
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
+
+  --transition: 200ms ease;
+}

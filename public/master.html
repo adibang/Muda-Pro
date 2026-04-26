@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Master Data – Muda Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css?t=20260427">
+  <link rel="stylesheet" href="/css/dashboard.css?t=20260427">
+  <link rel="stylesheet" href="/css/master.css?t=20260427">
+</head>
+<body>
+  <!-- HEADER (sama dengan dashboard) -->
+  <header class="header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menuToggle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="logo-text">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v12h18V9"/><path d="M3 3h18l-2 6H5L3 3z"/><path d="M9 21V9h6v12"/></svg>
+        Muda Pro
+      </span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR (sama dengan dashboard) -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-menu">
+      <a href="/dashboard.html" data-page="dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/pos.html" data-page="pos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Point of Sale
+      </a>
+      <a href="/inventory.html" data-page="inventory">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+        Inventori
+      </a>
+      <a href="/master.html" class="active" data-page="master">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Master Data
+      </a>
+      <a href="/reports.html" data-page="reports">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Laporan
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-info-sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="userName">...</span>
+      </div>
+      <button class="btn-logout" id="btnLogout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+    <div class="master-header">
+      <h1>Master Data</h1>
+        <div class="tab-nav" id="tabNav">
+          <button class="tab-btn" data-tab="kategori">Kategori</button>
+          <button class="tab-btn" data-tab="satuan">Satuan</button>
+          <button class="tab-btn" data-tab="gudang">Gudang</button>
+          <button class="tab-btn" data-tab="customer">Customer</button>
+          <button class="tab-btn" data-tab="supplier">Supplier</button>
+          <a href="/produk.html" class="tab-btn" style="text-decoration:none;">Produk</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2 id="tabTitle">Kategori</h2>
+        <button class="btn-add" id="btnAdd">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tambah
+        </button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr id="tableHead"></tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="3">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-card">
+        <h3 id="modalTitle"></h3>
+        <form id="modalForm">
+          <div id="modalFields"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancel">Batal</button>
+            <button type="submit" class="btn-save" id="btnSave">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/master.js?t=20260427"></script>
+</body>
+</html>

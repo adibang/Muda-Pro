@@ -3,12 +3,13 @@ const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
+const path = require('path'); // diaktifkan jika nanti untuk frontend
 const { db, initDatabase } = require('./config/database');
 const initSalesTables = require('./config/initSalesTables');
 const initProductUnits = require('./config/initProductUnits');
 const initConfigTables = require('./config/initConfigTables');
 const initPricingTables = require('./config/initPricingTables');
-const path = require('path');
+const initInventoryTables = require('./config/initInventoryTables'); // tambahan
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,8 +20,8 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
-// Sajikan file statis dari folder public (frontend)
-// app.use(express.static(path.join(__dirname, 'public')));
+// Sajikan file statis dari folder public (frontend) – dinonaktifkan dulu
+app.use(express.static(path.join(__dirname, 'public')));
 
 async function start() {
   // Inisialisasi database dan tabel
@@ -29,6 +30,7 @@ async function start() {
   initProductUnits();
   initConfigTables();
   initPricingTables();
+  initInventoryTables(); // <-- tambahkan ini
 
   // API Routes
   app.use('/api/auth', require('./routes/auth'));
@@ -41,16 +43,15 @@ async function start() {
   app.use('/api/sales', require('./routes/sales'));
   app.use('/api/pengaturan', require('./routes/pengaturan'));
   app.use('/api/pricing', require('./routes/pricing'));
+  app.use('/api/inventory', require('./routes/inventory')); // fix typo
 
-  // Fallback SPA: untuk semua request non-API, kirim index.html
-  app.use((req, res, next) => {
-    // Jika request mengarah ke API, biarkan lanjut ke error handler standar
-    if (req.path.startsWith('/api/')) {
-      return next();
-    }
-    // Untuk request lainnya (frontend), kirim index.html
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
+  // Fallback SPA untuk frontend – nonaktifkan jika frontend belum siap
+  // app.use((req, res, next) => {
+  //   if (req.path.startsWith('/api/')) {
+  //     return next();
+  //   }
+  //   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  // });
 
   // Error handling middleware
   app.use((err, req, res, next) => {
