@@ -4,6 +4,7 @@ function initSalesTables() {
   db.run(`
     CREATE TABLE IF NOT EXISTS transaksi (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       nomor TEXT UNIQUE NOT NULL,
       tanggal DATE NOT NULL DEFAULT (date('now','localtime')),
       customer_id INTEGER,
@@ -29,6 +30,7 @@ function initSalesTables() {
   db.run(`
     CREATE TABLE IF NOT EXISTS transaksi_detail (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       transaksi_id INTEGER NOT NULL,
       produk_id INTEGER NOT NULL,
       varian_id INTEGER,

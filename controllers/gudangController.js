@@ -1,57 +1,58 @@
+// controllers/gudangController.js
 const { db } = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
 
-const getAll = (req, res) => {
+const getAll = async (req, res) => {
     try {
-        const data = db.all('SELECT * FROM gudang WHERE deleted = 0 ORDER BY nama');
-        return successResponse(res, data);
+        const tenantId = req.user.tenant_id;
+        const data = db.all('SELECT * FROM gudang WHERE tenant_id = ? AND deleted = 0 ORDER BY nama', [tenantId]);
+        return successResponse(res, data, 'Gudang retrieved successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const getById = (req, res) => {
+const getById = async (req, res) => {
     try {
-        const data = db.get('SELECT * FROM gudang WHERE id = ? AND deleted = 0', [req.params.id]);
-        if (!data) return errorResponse(res, 'Gudang tidak ditemukan', 404);
-        return successResponse(res, data);
+        const tenantId = req.user.tenant_id;
+        const data = db.get('SELECT * FROM gudang WHERE id = ? AND tenant_id = ? AND deleted = 0', [req.params.id, tenantId]);
+        if (!data) return errorResponse(res, 'Gudang not found', 404);
+        return successResponse(res, data, 'Gudang retrieved successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const create = (req, res) => {
+const create = async (req, res) => {
     try {
+        const tenantId = req.user.tenant_id;
         const { kode, nama, lokasi, kapasitas } = req.body;
-        if (!kode || !nama) return errorResponse(res, 'Kode dan nama wajib diisi');
-
-        db.run('INSERT INTO gudang (kode, nama, lokasi, kapasitas) VALUES (?, ?, ?, ?)', 
-            [kode, nama, lokasi || null, kapasitas || null]);
-        const data = db.get('SELECT * FROM gudang ORDER BY id DESC LIMIT 1');
-        return successResponse(res, data, 'Gudang berhasil dibuat', 201);
+        db.run('INSERT INTO gudang (tenant_id, kode, nama, lokasi, kapasitas) VALUES (?, ?, ?, ?, ?)', [tenantId, kode, nama, lokasi || null, kapasitas || null]);
+        const data = db.get('SELECT * FROM gudang WHERE id = last_insert_rowid() AND tenant_id = ?', [tenantId]);
+        return successResponse(res, data, 'Gudang created successfully', 201);
     } catch (err) {
-        if (err.message.includes('UNIQUE')) return errorResponse(res, 'Kode gudang sudah ada', 409);
         return errorResponse(res, err.message, 500);
     }
 };
 
-const update = (req, res) => {
+const update = async (req, res) => {
     try {
+        const tenantId = req.user.tenant_id;
         const { kode, nama, lokasi, kapasitas } = req.body;
-        db.run('UPDATE gudang SET kode = ?, nama = ?, lokasi = ?, kapasitas = ?, updated_at = datetime(\'now\') WHERE id = ?', 
-            [kode, nama, lokasi, kapasitas, req.params.id]);
-        const data = db.get('SELECT * FROM gudang WHERE id = ?', [req.params.id]);
-        if (!data) return errorResponse(res, 'Gudang tidak ditemukan', 404);
-        return successResponse(res, data, 'Gudang berhasil diperbarui');
+        db.run('UPDATE gudang SET kode = ?, nama = ?, lokasi = ?, kapasitas = ?, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?', [kode, nama, lokasi || null, kapasitas || null, req.params.id, tenantId]);
+        const data = db.get('SELECT * FROM gudang WHERE id = ? AND tenant_id = ?', [req.params.id, tenantId]);
+        if (!data) return errorResponse(res, 'Gudang not found', 404);
+        return successResponse(res, data, 'Gudang updated successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const remove = (req, res) => {
+const remove = async (req, res) => {
     try {
-        db.run('UPDATE gudang SET deleted = 1, updated_at = datetime(\'now\') WHERE id = ?', [req.params.id]);
-        return successResponse(res, null, 'Gudang berhasil dihapus');
+        const tenantId = req.user.tenant_id;
+        db.run('UPDATE gudang SET deleted = 1, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?', [req.params.id, tenantId]);
+        return successResponse(res, null, 'Gudang deleted successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }

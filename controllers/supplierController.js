@@ -1,57 +1,58 @@
+// controllers/supplierController.js
 const { db } = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
 
-const getAll = (req, res) => {
+const getAll = async (req, res) => {
     try {
-        const data = db.all('SELECT * FROM supplier WHERE deleted = 0 ORDER BY nama');
-        return successResponse(res, data);
+        const tenantId = req.user.tenant_id;
+        const data = db.all('SELECT * FROM supplier WHERE tenant_id = ? AND deleted = 0 ORDER BY nama', [tenantId]);
+        return successResponse(res, data, 'Supplier retrieved successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const getById = (req, res) => {
+const getById = async (req, res) => {
     try {
-        const data = db.get('SELECT * FROM supplier WHERE id = ? AND deleted = 0', [req.params.id]);
-        if (!data) return errorResponse(res, 'Supplier tidak ditemukan', 404);
-        return successResponse(res, data);
+        const tenantId = req.user.tenant_id;
+        const data = db.get('SELECT * FROM supplier WHERE id = ? AND tenant_id = ? AND deleted = 0', [req.params.id, tenantId]);
+        if (!data) return errorResponse(res, 'Supplier not found', 404);
+        return successResponse(res, data, 'Supplier retrieved successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const create = (req, res) => {
+const create = async (req, res) => {
     try {
+        const tenantId = req.user.tenant_id;
         const { kode, nama, kontak } = req.body;
-        if (!nama) return errorResponse(res, 'Nama wajib diisi');
-
-        db.run('INSERT INTO supplier (kode, nama, kontak) VALUES (?, ?, ?)', 
-            [kode || null, nama, kontak || null]);
-        const data = db.get('SELECT * FROM supplier ORDER BY id DESC LIMIT 1');
-        return successResponse(res, data, 'Supplier berhasil dibuat', 201);
+        db.run('INSERT INTO supplier (tenant_id, kode, nama, kontak) VALUES (?, ?, ?, ?)', [tenantId, kode, nama, kontak || null]);
+        const data = db.get('SELECT * FROM supplier WHERE id = last_insert_rowid() AND tenant_id = ?', [tenantId]);
+        return successResponse(res, data, 'Supplier created successfully', 201);
     } catch (err) {
-        if (err.message.includes('UNIQUE')) return errorResponse(res, 'Kode supplier sudah ada', 409);
         return errorResponse(res, err.message, 500);
     }
 };
 
-const update = (req, res) => {
+const update = async (req, res) => {
     try {
+        const tenantId = req.user.tenant_id;
         const { kode, nama, kontak } = req.body;
-        db.run('UPDATE supplier SET kode = ?, nama = ?, kontak = ?, updated_at = datetime(\'now\') WHERE id = ?', 
-            [kode, nama, kontak, req.params.id]);
-        const data = db.get('SELECT * FROM supplier WHERE id = ?', [req.params.id]);
-        if (!data) return errorResponse(res, 'Supplier tidak ditemukan', 404);
-        return successResponse(res, data, 'Supplier berhasil diperbarui');
+        db.run('UPDATE supplier SET kode = ?, nama = ?, kontak = ?, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?', [kode, nama, kontak || null, req.params.id, tenantId]);
+        const data = db.get('SELECT * FROM supplier WHERE id = ? AND tenant_id = ?', [req.params.id, tenantId]);
+        if (!data) return errorResponse(res, 'Supplier not found', 404);
+        return successResponse(res, data, 'Supplier updated successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const remove = (req, res) => {
+const remove = async (req, res) => {
     try {
-        db.run('UPDATE supplier SET deleted = 1, updated_at = datetime(\'now\') WHERE id = ?', [req.params.id]);
-        return successResponse(res, null, 'Supplier berhasil dihapus');
+        const tenantId = req.user.tenant_id;
+        db.run('UPDATE supplier SET deleted = 1, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?', [req.params.id, tenantId]);
+        return successResponse(res, null, 'Supplier deleted successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }

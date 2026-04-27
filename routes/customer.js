@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/customerController');
-const { authenticateToken } = require('../middleware/auth');
-const { body } = require('express-validator');
+const customerController = require('../controllers/customerController');
+const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
-router.get('/', authenticateToken, ctrl.getAll);
-router.get('/:id', authenticateToken, ctrl.getById);
-router.post('/', authenticateToken, [
-    body('nama').notEmpty().withMessage('Nama customer wajib diisi')
-], ctrl.create);
-router.put('/:id', authenticateToken, ctrl.update);
-router.delete('/:id', authenticateToken, ctrl.remove);
+router.use(authenticateToken);
+
+router.post('/', authorizeRole('admin'), customerController.create);
+router.get('/', authorizeRole('admin', 'kasir'), customerController.getAll);
+router.get('/:id', authorizeRole('admin', 'kasir'), customerController.getById);
+router.put('/:id', authorizeRole('admin'), customerController.update);
+router.delete('/:id', authorizeRole('admin'), customerController.remove);
 
 module.exports = router;

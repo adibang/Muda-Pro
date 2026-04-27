@@ -3,36 +3,43 @@ const { db } = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
 
 // ------------------- HELPER UNTUK STOK -------------------
-function updateStok(produk_id, varian_id, gudang_id, delta, tipe, referensi, userId, catatan = '') {
-  // Ambil stok saat ini
-  const row = db.get(
-    'SELECT id, stok FROM stok_gudang WHERE produk_id = ? AND varian_id IS ? AND gudang_id = ?',
-    [produk_id, varian_id, gudang_id]
-  );
-  const stokSebelum = row ? row.stok : 0;
+function updateStok(produk_id, varian_id, gudang_id, delta, tipe, referensi, userId, catatan = '', tenantId) {
+  let stokRow;
+  if (varian_id === null || varian_id === undefined) {
+    stokRow = db.get(
+      'SELECT id, stok FROM stok_gudang WHERE produk_id = ? AND varian_id IS NULL AND gudang_id = ? AND tenant_id = ?',
+      [produk_id, gudang_id, tenantId]
+    );
+  } else {
+    stokRow = db.get(
+      'SELECT id, stok FROM stok_gudang WHERE produk_id = ? AND varian_id = ? AND gudang_id = ? AND tenant_id = ?',
+      [produk_id, varian_id, gudang_id, tenantId]
+    );
+  }
+
+  const stokSebelum = stokRow ? stokRow.stok : 0;
   const stokSesudah = stokSebelum + delta;
 
   if (stokSesudah < 0) {
     throw new Error('Stok tidak mencukupi untuk operasi ini');
   }
 
-  if (row) {
+  if (stokRow) {
     db.run(
       `UPDATE stok_gudang SET stok = ?, updated_at = datetime('now','localtime') WHERE id = ?`,
-      [stokSesudah, row.id]
+      [stokSesudah, stokRow.id]
     );
   } else {
     db.run(
-      'INSERT INTO stok_gudang (produk_id, varian_id, gudang_id, stok) VALUES (?, ?, ?, ?)',
-      [produk_id, varian_id, gudang_id, stokSesudah]
+      'INSERT INTO stok_gudang (tenant_id, produk_id, varian_id, gudang_id, stok) VALUES (?, ?, ?, ?, ?)',
+      [tenantId, produk_id, varian_id, gudang_id, stokSesudah]
     );
   }
 
-  // Catat mutasi
   db.run(
-    `INSERT INTO mutasi_stok (tipe, produk_id, varian_id, gudang_id, kuantitas, stok_sebelum, stok_sesudah, referensi, user_id, catatan)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [tipe, produk_id, varian_id, gudang_id, delta, stokSebelum, stokSesudah, referensi, userId, catatan]
+    `INSERT INTO mutasi_stok (tenant_id, tipe, produk_id, varian_id, gudang_id, kuantitas, stok_sebelum, stok_sesudah, referensi, user_id, catatan)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [tenantId, tipe, produk_id, varian_id, gudang_id, delta, stokSebelum, stokSesudah, referensi, userId, catatan]
   );
 }
 // ---------------------------------------------------------
@@ -41,6 +48,7 @@ const salesController = {
   // POST /api/sales
   create: (req, res) => {
     try {
+      const tenantId = req.user.tenant_id;
       const {
         customer_id,
         gudang_id = 1,
@@ -107,7 +115,7 @@ const salesController = {
 
           const kuantitasParsed = weightRaw / weightScale;
 
-          const produkByBarcode = db.get('SELECT * FROM produk WHERE kode = ? AND deleted = 0', [pluCode]);
+          const produkByBarcode = db.get('SELECT * FROM produk WHERE kode = ? AND tenant_id = ? AND deleted = 0', [pluCode, tenantId]);
           if (!produkByBarcode) {
             return errorResponse(res, `Produk dengan kode '${pluCode}' tidak ditemukan`, 404);
           }
@@ -137,21 +145,19 @@ const salesController = {
             return errorResponse(res, 'Satuan tidak sesuai dengan varian', 400);
           }
 
-          // Ambil harga dari satuan jika ada, kalau tidak dari varian/produk
           if (produkSatuan.varian_id) {
             const varian = db.get('SELECT harga_jual FROM varian_produk WHERE id = ? AND deleted = 0', [produkSatuan.varian_id]);
             if (!varian) return errorResponse(res, 'Varian tidak ditemukan', 404);
             hargaSatuan = produkSatuan.harga_jual !== null ? produkSatuan.harga_jual : varian.harga_jual;
-            // Ambil stok dari stok_gudang
-            const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id = ? AND gudang_id = ?',
-              [produkSatuan.produk_id, produkSatuan.varian_id, gudang_id]);
+            const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id = ? AND gudang_id = ? AND tenant_id = ?',
+              [produkSatuan.produk_id, produkSatuan.varian_id, gudang_id, tenantId]);
             stokTersedia = stokRow ? stokRow.stok : 0;
           } else {
-            const produk = db.get('SELECT harga_jual FROM produk WHERE id = ? AND deleted = 0', [produkSatuan.produk_id]);
+            const produk = db.get('SELECT harga_jual FROM produk WHERE id = ? AND tenant_id = ? AND deleted = 0', [produkSatuan.produk_id, tenantId]);
             if (!produk) return errorResponse(res, 'Produk tidak ditemukan', 404);
             hargaSatuan = produkSatuan.harga_jual !== null ? produkSatuan.harga_jual : produk.harga_jual;
-            const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id IS NULL AND gudang_id = ?',
-              [produkSatuan.produk_id, gudang_id]);
+            const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id IS NULL AND gudang_id = ? AND tenant_id = ?',
+              [produkSatuan.produk_id, gudang_id, tenantId]);
             stokTersedia = stokRow ? stokRow.stok : 0;
           }
           satuanDasar = produkSatuan.faktor_konversi || 1;
@@ -160,17 +166,17 @@ const salesController = {
           const varian = db.get('SELECT harga_jual FROM varian_produk WHERE id = ? AND deleted = 0', [varian_id]);
           if (!varian) return errorResponse(res, 'Varian tidak ditemukan', 404);
           hargaSatuan = varian.harga_jual;
-          const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id = ? AND gudang_id = ?',
-            [produk_id, varian_id, gudang_id]);
+          const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id = ? AND gudang_id = ? AND tenant_id = ?',
+            [produk_id, varian_id, gudang_id, tenantId]);
           stokTersedia = stokRow ? stokRow.stok : 0;
           satuanDasar = 1;
 
         } else {
-          const produk = db.get('SELECT harga_jual FROM produk WHERE id = ? AND deleted = 0', [produk_id]);
+          const produk = db.get('SELECT harga_jual FROM produk WHERE id = ? AND tenant_id = ? AND deleted = 0', [produk_id, tenantId]);
           if (!produk) return errorResponse(res, 'Produk tidak ditemukan', 404);
           hargaSatuan = produk.harga_jual;
-          const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id IS NULL AND gudang_id = ?',
-            [produk_id, gudang_id]);
+          const stokRow = db.get('SELECT stok FROM stok_gudang WHERE produk_id = ? AND varian_id IS NULL AND gudang_id = ? AND tenant_id = ?',
+            [produk_id, gudang_id, tenantId]);
           stokTersedia = stokRow ? stokRow.stok : 0;
           satuanDasar = 1;
         }
@@ -260,12 +266,12 @@ const salesController = {
       const now = new Date().toISOString().slice(0, 10);
 
       db.run(
-        `INSERT INTO transaksi (nomor, tanggal, customer_id, gudang_id, user_id,
+        `INSERT INTO transaksi (tenant_id, nomor, tanggal, customer_id, gudang_id, user_id,
           total_sebelum_diskon, diskon_persen, diskon_nominal, total_setelah_diskon,
           pajak_persen, pajak_nominal, total_akhir, dibayar, kembalian, metode_pembayaran, catatan)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          tempNomor, now, customer_id || null, gudang_id, userId,
+          tenantId, tempNomor, now, customer_id || null, gudang_id, userId,
           totalSebelumDiskon, diskon_persen, diskon_nominal, totalSetelahDiskon,
           pajak_persen, pajak_nominal, totalAkhir, dibayar, kembalian, metode_pembayaran, catatan
         ]
@@ -282,20 +288,18 @@ const salesController = {
       const nomorFinal = `TRX-${today}-${String(transaksiId).padStart(4, '0')}`;
       db.run('UPDATE transaksi SET nomor = ? WHERE id = ?', [nomorFinal, transaksiId]);
 
-      // ===== INSERT DETAIL & UPDATE STOK (via stok_gudang & mutasi) =====
+      // ===== INSERT DETAIL & UPDATE STOK =====
       for (const detail of detailList) {
-        // Insert detail transaksi
         db.run(
-          `INSERT INTO transaksi_detail (transaksi_id, produk_id, varian_id, kuantitas, harga_satuan, diskon_persen, diskon_nominal, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO transaksi_detail (tenant_id, transaksi_id, produk_id, varian_id, kuantitas, harga_satuan, diskon_persen, diskon_nominal, subtotal)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            transaksiId, detail.produk_id, detail.varian_id,
+            tenantId, transaksiId, detail.produk_id, detail.varian_id,
             detail.kuantitas, detail.harga_satuan,
             detail.diskon_persen, detail.diskon_nominal, detail.subtotal
           ]
         );
 
-        // Kurangi stok & catat mutasi penjualan
         try {
           updateStok(
             detail.produk_id,
@@ -305,11 +309,10 @@ const salesController = {
             'penjualan',
             nomorFinal,
             userId,
-            'Penjualan #' + nomorFinal
+            'Penjualan #' + nomorFinal,
+            tenantId
           );
         } catch (stokError) {
-          // Rollback transaksi ini? Minimal kita batalkan seluruh transaksi
-          // Karena sulit melakukan rollback penuh, kita kembalikan error
           return errorResponse(res, 'Gagal update stok: ' + stokError.message, 500);
         }
       }
@@ -321,8 +324,8 @@ const salesController = {
          LEFT JOIN customer c ON t.customer_id = c.id
          LEFT JOIN gudang g ON t.gudang_id = g.id
          LEFT JOIN users u ON t.user_id = u.id
-         WHERE t.id = ?`,
-        [transaksiId]
+         WHERE t.id = ? AND t.tenant_id = ?`,
+        [transaksiId, tenantId]
       );
       if (!transaksi) {
         return errorResponse(res, 'Gagal mengambil data transaksi', 500);
@@ -347,13 +350,14 @@ const salesController = {
   // GET /api/sales?start_date=&end_date=&customer_id=&gudang_id=
   getAll: (req, res) => {
     try {
+      const tenantId = req.user.tenant_id;
       let sql = `SELECT t.*, c.nama AS customer_nama, g.nama AS gudang_nama, u.nama_lengkap AS kasir_nama
                  FROM transaksi t
                  LEFT JOIN customer c ON t.customer_id = c.id
                  LEFT JOIN gudang g ON t.gudang_id = g.id
                  LEFT JOIN users u ON t.user_id = u.id
-                 WHERE t.deleted = 0`;
-      const params = [];
+                 WHERE t.tenant_id = ? AND t.deleted = 0`;
+      const params = [tenantId];
       if (req.query.start_date) {
         sql += ` AND t.tanggal >= ?`;
         params.push(req.query.start_date);
@@ -381,6 +385,7 @@ const salesController = {
   // GET /api/sales/:id
   getById: (req, res) => {
     try {
+      const tenantId = req.user.tenant_id;
       const { id } = req.params;
       const transaksi = db.get(
         `SELECT t.*, c.nama AS customer_nama, g.nama AS gudang_nama, u.nama_lengkap AS kasir_nama
@@ -388,8 +393,8 @@ const salesController = {
          LEFT JOIN customer c ON t.customer_id = c.id
          LEFT JOIN gudang g ON t.gudang_id = g.id
          LEFT JOIN users u ON t.user_id = u.id
-         WHERE t.id = ? AND t.deleted = 0`,
-        [id]
+         WHERE t.id = ? AND t.tenant_id = ? AND t.deleted = 0`,
+        [id, tenantId]
       );
       if (!transaksi) {
         return errorResponse(res, 'Transaksi tidak ditemukan', 404);

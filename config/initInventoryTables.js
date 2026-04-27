@@ -1,11 +1,10 @@
-// config/initInventoryTables.js
 const { db } = require('./database');
 
 function initInventoryTables() {
-  // Stok per gudang (sumber kebenaran stok)
   db.run(`
     CREATE TABLE IF NOT EXISTS stok_gudang (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       produk_id INTEGER NOT NULL,
       varian_id INTEGER,
       gudang_id INTEGER NOT NULL,
@@ -15,20 +14,16 @@ function initInventoryTables() {
       FOREIGN KEY (produk_id) REFERENCES produk(id),
       FOREIGN KEY (varian_id) REFERENCES varian_produk(id),
       FOREIGN KEY (gudang_id) REFERENCES gudang(id),
-      UNIQUE(produk_id, varian_id, gudang_id)
+      UNIQUE(tenant_id, produk_id, varian_id, gudang_id)
     )
   `);
 
-  // Riwayat mutasi stok
   db.run(`
     CREATE TABLE IF NOT EXISTS mutasi_stok (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       tanggal DATE NOT NULL DEFAULT (date('now','localtime')),
-      tipe TEXT NOT NULL CHECK(tipe IN (
-        'masuk','keluar','penjualan',
-        'transfer_keluar','transfer_masuk',
-        'opname_masuk','opname_keluar'
-      )),
+      tipe TEXT NOT NULL CHECK(tipe IN ('masuk','keluar','penjualan','transfer_keluar','transfer_masuk','opname_masuk','opname_keluar')),
       produk_id INTEGER NOT NULL,
       varian_id INTEGER,
       gudang_id INTEGER NOT NULL,
@@ -46,10 +41,10 @@ function initInventoryTables() {
     )
   `);
 
-  // Header transfer
   db.run(`
     CREATE TABLE IF NOT EXISTS transfer (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       nomor TEXT UNIQUE NOT NULL,
       tanggal DATE NOT NULL DEFAULT (date('now','localtime')),
       gudang_asal_id INTEGER NOT NULL,
@@ -65,10 +60,10 @@ function initInventoryTables() {
     )
   `);
 
-  // Detail transfer
   db.run(`
     CREATE TABLE IF NOT EXISTS transfer_detail (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       transfer_id INTEGER NOT NULL,
       produk_id INTEGER NOT NULL,
       varian_id INTEGER,
@@ -80,10 +75,10 @@ function initInventoryTables() {
     )
   `);
 
-  // Header stok opname
   db.run(`
     CREATE TABLE IF NOT EXISTS stok_opname (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       nomor TEXT UNIQUE NOT NULL,
       tanggal DATE NOT NULL DEFAULT (date('now','localtime')),
       gudang_id INTEGER NOT NULL,
@@ -97,10 +92,10 @@ function initInventoryTables() {
     )
   `);
 
-  // Detail stok opname (selisih dihitung manual saat insert/update)
   db.run(`
     CREATE TABLE IF NOT EXISTS stok_opname_detail (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id),
       opname_id INTEGER NOT NULL,
       produk_id INTEGER NOT NULL,
       varian_id INTEGER,
@@ -114,6 +109,8 @@ function initInventoryTables() {
       UNIQUE(opname_id, produk_id, varian_id)
     )
   `);
+
+  console.log('Inventory tables initialized with tenant_id');
 }
 
 module.exports = initInventoryTables;

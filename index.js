@@ -9,7 +9,9 @@ const initSalesTables = require('./config/initSalesTables');
 const initProductUnits = require('./config/initProductUnits');
 const initConfigTables = require('./config/initConfigTables');
 const initPricingTables = require('./config/initPricingTables');
-const initInventoryTables = require('./config/initInventoryTables'); // tambahan
+const initInventoryTables = require('./config/initInventoryTables');
+const initPurchaseTables = require('./config/initPurchaseTables');
+const initFinanceTables = require('./config/initFinanceTables');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,7 +32,9 @@ async function start() {
   initProductUnits();
   initConfigTables();
   initPricingTables();
-  initInventoryTables(); // <-- tambahkan ini
+  initInventoryTables();
+  initPurchaseTables();
+  initFinanceTables();
 
   // API Routes
   app.use('/api/auth', require('./routes/auth'));
@@ -43,7 +47,10 @@ async function start() {
   app.use('/api/sales', require('./routes/sales'));
   app.use('/api/pengaturan', require('./routes/pengaturan'));
   app.use('/api/pricing', require('./routes/pricing'));
-  app.use('/api/inventory', require('./routes/inventory')); // fix typo
+  app.use('/api/inventory', require('./routes/inventory'));
+  app.use('/api/purchase', require('./routes/purchase'));
+  app.use('/api/report', require('./routes/report'));
+  app.use('/api/finance', require('./routes/finance'));
 
   // Fallback SPA untuk frontend – nonaktifkan jika frontend belum siap
   // app.use((req, res, next) => {

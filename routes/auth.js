@@ -1,28 +1,31 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
-const ctrl = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/auth');
-const { body } = require('express-validator');
+const authController = require('../controllers/authController');
+const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
-// Register
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: 'error', message: 'Validasi gagal', errors: errors.array() });
+  }
+  next();
+};
+
 router.post('/register', [
-    body('email').isEmail().withMessage('Email tidak valid'),
-    body('password').isLength({ min: 8 }).withMessage('Password minimal 8 karakter')
-], ctrl.register);
+  body('email').isEmail().withMessage('Email tidak valid'),
+  body('password').isLength({ min: 8 }).withMessage('Password minimal 8 karakter'),
+  body('nama_lengkap').optional().isString(),
+  body('nama_toko').notEmpty().withMessage('Nama toko wajib diisi')
+], validate, authController.register);
 
-// Login
-router.post('/login', [
-    body('email').isEmail().withMessage('Email tidak valid'),
-    body('password').notEmpty().withMessage('Password wajib diisi')
-], ctrl.login);
+router.post('/login', authController.login);
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authenticateToken, authController.logout);
+router.get('/profile', authenticateToken, authController.profile);
 
-// Refresh token
-router.post('/refresh-token', ctrl.refreshToken);
-
-// Logout
-router.post('/logout', authenticateToken, ctrl.logout);
-
-// Profile
-router.get('/profile', authenticateToken, ctrl.profile);
+// User management (admin only)
+router.post('/users', authenticateToken, authorizeRole('admin'), authController.addUser);
+router.get('/users', authenticateToken, authorizeRole('admin'), authController.listUsers);
 
 module.exports = router;

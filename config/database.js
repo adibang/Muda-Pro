@@ -4,14 +4,12 @@ const path = require('path');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'pos.db');
 
-// Pastikan folder data ada
 if (!fs.existsSync(path.dirname(DB_PATH))) {
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 }
 
 let dbInstance = null;
 
-// Simpan database ke file
 function saveDatabase() {
     if (!dbInstance) return;
     const data = dbInstance.export();
@@ -19,11 +17,9 @@ function saveDatabase() {
     fs.writeFileSync(DB_PATH, buffer);
 }
 
-// Inisialisasi database dan tabel
 async function initDatabase() {
     const SQL = await initSqlJs();
 
-    // Load database dari file jika ada, jika tidak buat baru
     if (fs.existsSync(DB_PATH)) {
         const fileBuffer = fs.readFileSync(DB_PATH);
         dbInstance = new SQL.Database(fileBuffer);
@@ -33,13 +29,24 @@ async function initDatabase() {
         console.log('New database created in memory.');
     }
 
-    // Aktifkan WAL mode dan foreign keys
     dbInstance.run('PRAGMA journal_mode=WAL;');
     dbInstance.run('PRAGMA foreign_keys=ON;');
+
+    // ---------- TABEL TENANTS ----------
+    dbInstance.run(`CREATE TABLE IF NOT EXISTS tenants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_toko TEXT NOT NULL,
+        alamat TEXT,
+        telepon TEXT,
+        aktif INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    )`);
 
     // ---------- TABEL USERS ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         nama_lengkap TEXT,
@@ -64,6 +71,7 @@ async function initDatabase() {
     // ---------- TABEL KATEGORI ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS kategori (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         nama TEXT NOT NULL,
         deleted INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now')),
@@ -73,6 +81,7 @@ async function initDatabase() {
     // ---------- TABEL SATUAN ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS satuan (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         nama TEXT NOT NULL,
         deleted INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now')),
@@ -82,6 +91,7 @@ async function initDatabase() {
     // ---------- TABEL GUDANG ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS gudang (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         kode TEXT NOT NULL,
         nama TEXT NOT NULL,
         lokasi TEXT,
@@ -94,6 +104,7 @@ async function initDatabase() {
     // ---------- TABEL CUSTOMER ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS customer (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         kode TEXT UNIQUE,
         nama TEXT NOT NULL,
         kontak TEXT,
@@ -106,6 +117,7 @@ async function initDatabase() {
     // ---------- TABEL SUPPLIER ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS supplier (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         kode TEXT UNIQUE,
         nama TEXT NOT NULL,
         kontak TEXT,
@@ -117,6 +129,7 @@ async function initDatabase() {
     // ---------- TABEL PRODUK ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS produk (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         kode TEXT UNIQUE,
         nama TEXT NOT NULL,
         barcode TEXT,
@@ -138,6 +151,7 @@ async function initDatabase() {
     // ---------- TABEL VARIAN PRODUK ----------
     dbInstance.run(`CREATE TABLE IF NOT EXISTS varian_produk (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER REFERENCES tenants(id),
         produk_id INTEGER REFERENCES produk(id),
         nama_varian TEXT NOT NULL,
         barcode TEXT,
@@ -152,12 +166,11 @@ async function initDatabase() {
     )`);
 
     saveDatabase();
-    console.log('Database tables initialized successfully');
+    console.log('Database core tables initialized');
 }
 
-// ---------- WRAPPER FUNGSI UNTUK QUERY (Pengganti Knex) ----------
+// ---------- WRAPPER FUNGSI ----------
 const db = {
-    // Jalankan query INSERT/UPDATE/DELETE
     run: (sql, params = []) => {
         if (!dbInstance) throw new Error('Database not initialized');
         try {
@@ -169,7 +182,6 @@ const db = {
         }
     },
 
-    // Ambil satu baris
     get: (sql, params = []) => {
         if (!dbInstance) throw new Error('Database not initialized');
         try {
@@ -187,7 +199,6 @@ const db = {
         }
     },
 
-    // Ambil banyak baris
     all: (sql, params = []) => {
         if (!dbInstance) throw new Error('Database not initialized');
         try {
@@ -204,7 +215,6 @@ const db = {
         }
     },
 
-    // Eksekusi query langsung tanpa return (untuk DDL)
     exec: (sql) => {
         if (!dbInstance) throw new Error('Database not initialized');
         try {
@@ -215,7 +225,6 @@ const db = {
         }
     },
 
-    // Ambil nilai tunggal (untuk COUNT, MAX, dll.)
     pluck: (sql, params = []) => {
         const row = db.get(sql, params);
         if (row) {

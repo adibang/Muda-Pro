@@ -1,57 +1,58 @@
+// controllers/customerController.js
 const { db } = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/response');
 
-const getAll = (req, res) => {
+const getAll = async (req, res) => {
     try {
-        const data = db.all('SELECT * FROM customer WHERE deleted = 0 ORDER BY nama');
-        return successResponse(res, data);
+        const tenantId = req.user.tenant_id;
+        const data = db.all('SELECT * FROM customer WHERE tenant_id = ? AND deleted = 0 ORDER BY nama', [tenantId]);
+        return successResponse(res, data, 'Customer retrieved successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const getById = (req, res) => {
+const getById = async (req, res) => {
     try {
-        const data = db.get('SELECT * FROM customer WHERE id = ? AND deleted = 0', [req.params.id]);
-        if (!data) return errorResponse(res, 'Customer tidak ditemukan', 404);
-        return successResponse(res, data);
+        const tenantId = req.user.tenant_id;
+        const data = db.get('SELECT * FROM customer WHERE id = ? AND tenant_id = ? AND deleted = 0', [req.params.id, tenantId]);
+        if (!data) return errorResponse(res, 'Customer not found', 404);
+        return successResponse(res, data, 'Customer retrieved successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const create = (req, res) => {
+const create = async (req, res) => {
     try {
+        const tenantId = req.user.tenant_id;
         const { kode, nama, kontak } = req.body;
-        if (!nama) return errorResponse(res, 'Nama wajib diisi');
-
-        db.run('INSERT INTO customer (kode, nama, kontak) VALUES (?, ?, ?)', 
-            [kode || null, nama, kontak || null]);
-        const data = db.get('SELECT * FROM customer ORDER BY id DESC LIMIT 1');
-        return successResponse(res, data, 'Customer berhasil dibuat', 201);
-    } catch (err) {
-        if (err.message.includes('UNIQUE')) return errorResponse(res, 'Kode customer sudah ada', 409);
-        return errorResponse(res, err.message, 500);
-    }
-};
-
-const update = (req, res) => {
-    try {
-        const { kode, nama, kontak } = req.body;
-        db.run('UPDATE customer SET kode = ?, nama = ?, kontak = ?, updated_at = datetime(\'now\') WHERE id = ?', 
-            [kode, nama, kontak, req.params.id]);
-        const data = db.get('SELECT * FROM customer WHERE id = ?', [req.params.id]);
-        if (!data) return errorResponse(res, 'Customer tidak ditemukan', 404);
-        return successResponse(res, data, 'Customer berhasil diperbarui');
+        db.run('INSERT INTO customer (tenant_id, kode, nama, kontak) VALUES (?, ?, ?, ?)', [tenantId, kode, nama, kontak || null]);
+        const data = db.get('SELECT * FROM customer WHERE id = last_insert_rowid() AND tenant_id = ?', [tenantId]);
+        return successResponse(res, data, 'Customer created successfully', 201);
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }
 };
 
-const remove = (req, res) => {
+const update = async (req, res) => {
     try {
-        db.run('UPDATE customer SET deleted = 1, updated_at = datetime(\'now\') WHERE id = ?', [req.params.id]);
-        return successResponse(res, null, 'Customer berhasil dihapus');
+        const tenantId = req.user.tenant_id;
+        const { kode, nama, kontak, outstanding } = req.body;
+        db.run('UPDATE customer SET kode = ?, nama = ?, kontak = ?, outstanding = ?, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?', [kode, nama, kontak || null, outstanding || 0, req.params.id, tenantId]);
+        const data = db.get('SELECT * FROM customer WHERE id = ? AND tenant_id = ?', [req.params.id, tenantId]);
+        if (!data) return errorResponse(res, 'Customer not found', 404);
+        return successResponse(res, data, 'Customer updated successfully');
+    } catch (err) {
+        return errorResponse(res, err.message, 500);
+    }
+};
+
+const remove = async (req, res) => {
+    try {
+        const tenantId = req.user.tenant_id;
+        db.run('UPDATE customer SET deleted = 1, updated_at = datetime(\'now\') WHERE id = ? AND tenant_id = ?', [req.params.id, tenantId]);
+        return successResponse(res, null, 'Customer deleted successfully');
     } catch (err) {
         return errorResponse(res, err.message, 500);
     }

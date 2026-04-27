@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/kategoriController');
-const { authenticateToken } = require('../middleware/auth');
-const { body } = require('express-validator');
+const kategoriController = require('../controllers/kategoriController');
+const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
-router.get('/', authenticateToken, ctrl.getAll);
-router.get('/:id', authenticateToken, ctrl.getById);
-router.post('/', authenticateToken, [
-    body('nama').notEmpty().withMessage('Nama kategori wajib diisi')
-], ctrl.create);
-router.put('/:id', authenticateToken, ctrl.update);
-router.delete('/:id', authenticateToken, ctrl.remove);
+router.use(authenticateToken);
+
+router.post('/', authorizeRole('admin'), kategoriController.create);
+router.get('/', authorizeRole('admin', 'kasir', 'stok'), kategoriController.getAll);
+router.get('/:id', authorizeRole('admin', 'kasir', 'stok'), kategoriController.getById);
+router.put('/:id', authorizeRole('admin'), kategoriController.update);
+router.delete('/:id', authorizeRole('admin'), kategoriController.remove);
 
 module.exports = router;

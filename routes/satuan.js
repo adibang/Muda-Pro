@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/satuanController');
-const { authenticateToken } = require('../middleware/auth');
-const { body } = require('express-validator');
+const satuanController = require('../controllers/satuanController');
+const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
-router.get('/', authenticateToken, ctrl.getAll);
-router.get('/:id', authenticateToken, ctrl.getById);
-router.post('/', authenticateToken, [
-    body('nama').notEmpty().withMessage('Nama satuan wajib diisi')
-], ctrl.create);
-router.put('/:id', authenticateToken, ctrl.update);
-router.delete('/:id', authenticateToken, ctrl.remove);
+router.use(authenticateToken);
+
+router.post('/', authorizeRole('admin'), satuanController.create);
+router.get('/', authorizeRole('admin', 'kasir', 'stok'), satuanController.getAll);
+router.get('/:id', authorizeRole('admin', 'kasir', 'stok'), satuanController.getById);
+router.put('/:id', authorizeRole('admin'), satuanController.update);
+router.delete('/:id', authorizeRole('admin'), satuanController.remove);
 
 module.exports = router;

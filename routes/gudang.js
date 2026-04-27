@@ -1,16 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/gudangController');
-const { authenticateToken } = require('../middleware/auth');
-const { body } = require('express-validator');
+const gudangController = require('../controllers/gudangController');
+const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
-router.get('/', authenticateToken, ctrl.getAll);
-router.get('/:id', authenticateToken, ctrl.getById);
-router.post('/', authenticateToken, [
-    body('kode').notEmpty().withMessage('Kode gudang wajib diisi'),
-    body('nama').notEmpty().withMessage('Nama gudang wajib diisi')
-], ctrl.create);
-router.put('/:id', authenticateToken, ctrl.update);
-router.delete('/:id', authenticateToken, ctrl.remove);
+router.use(authenticateToken);
+
+router.post('/', authorizeRole('admin'), gudangController.create);
+router.get('/', authorizeRole('admin', 'kasir', 'stok'), gudangController.getAll);
+router.get('/:id', authorizeRole('admin', 'kasir', 'stok'), gudangController.getById);
+router.put('/:id', authorizeRole('admin'), gudangController.update);
+router.delete('/:id', authorizeRole('admin'), gudangController.remove);
 
 module.exports = router;
